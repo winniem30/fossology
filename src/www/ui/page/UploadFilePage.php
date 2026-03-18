@@ -166,16 +166,21 @@ class UploadFilePage extends UploadPageBase
           $originalFileName;
         continue;
       }
-
       try {
         $uploadedTempFile = $uploadedFile['file']->move(
           $uploadedFile['file']->getPath(),
           $uploadedFile['file']->getFilename() . '-uploaded'
         )->getPathname();
       } catch (FileException $e) {
+        // 🔥 CLEANUP: delete orphan DB record
+        if (!empty($uploadId)) {
+          DeleteUpload($uploadId); // or equivalent DB delete function
+        }
+      
         $errors[] = _("Could not save uploaded file: ") . $originalFileName;
         continue;
       }
+   
       $success[] = [
         "tempfile" => $uploadedTempFile,
         "orignalfile" => $originalFileName,
