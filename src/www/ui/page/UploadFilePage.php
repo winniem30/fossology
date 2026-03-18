@@ -2,7 +2,7 @@
 /*
  SPDX-FileCopyrightText: © 2008-2013 Hewlett-Packard Development Company, L.P.
  SPDX-FileCopyrightText: © 2014-2017 Siemens AG
-
+ 
  SPDX-License-Identifier: GPL-2.0-only
 */
 
@@ -173,9 +173,15 @@ class UploadFilePage extends UploadPageBase
           $uploadedFile['file']->getFilename() . '-uploaded'
         )->getPathname();
       } catch (FileException $e) {
-        $errors[] = _("Could not save uploaded file: ") . $originalFileName;
-        continue;
-      }
+          if (!empty($uploadId)) {
+            $this->dbManager->getDbDriver()->exec(
+              "DELETE FROM upload WHERE upload_pk = " . intval($uploadId)
+            );
+          }
+        
+          $errors[] = _("Could not save uploaded file: ") . $originalFileName;
+          continue;
+}
       $success[] = [
         "tempfile" => $uploadedTempFile,
         "orignalfile" => $originalFileName,
