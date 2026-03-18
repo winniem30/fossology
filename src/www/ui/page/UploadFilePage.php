@@ -154,35 +154,50 @@ class UploadFilePage extends UploadPageBase
 
     $errors = [];
     $success = [];
-    foreach ($uploadFiles as $uploadedFile) {
-      $originalFileName = $uploadedFile['file']->getClientOriginalName();
-      $originalFileName = $this->basicShEscaping($originalFileName);
-      /* Create an upload record. */
-      $uploadId = JobAddUpload($userId, $groupId, $originalFileName,
-        $originalFileName, $uploadedFile['description'], $uploadMode,
-        $folderId, $publicPermission, $setGlobal);
-      if (empty($uploadId)) {
-        $errors[] = _("Failed to insert upload record: ") .
-          $originalFileName;
-        continue;
-      }
+    
+   foreach ($uploadFiles as $uploadedFile) {
+    $originalFileName = $uploadedFile['file']->getClientOriginalName();
+    $originalFileName = $this->basicShEscaping($originalFileName);
 
-      try {
-        $uploadedTempFile = $uploadedFile['file']->move(
-          $uploadedFile['file']->getPath(),
-          $uploadedFile['file']->getFilename() . '-uploaded'
-        )->getPathname();
-      } catch (FileException $e) {
-        $errors[] = _("Could not save uploaded file: ") . $originalFileName;
+    /* Create an upload record. */
+    $uploadId = JobAddUpload(
+        $userId,
+        $groupId,
+        $originalFileName,
+        $originalFileName,
+        $uploadedFile['description'],
+        $uploadMode,
+        $folderId,
+        $publicPermission,
+        $setGlobal
+    );
+
+    if (empty($uploadId)) {
+        $errors[] = _("Failed to insert upload record: ") . $originalFileName;
         continue;
-      }
-      $success[] = [
-        "tempfile" => $uploadedTempFile,
-        "orignalfile" => $originalFileName,
-        "uploadid" => $uploadId
-      ];
     }
 
+    try {
+        $uploadedTempFile = $uploadedFile['file']->move(
+            $uploadedFile['file']->getPath(),
+            $uploadedFile['file']->getFilename() . '-uploaded'
+        )->getPathname();
+    } catch (FileException $e) {
+        if (!empty($uploadId)) {
+            global $DB;
+            $DB->action("DELETE FROM upload WHERE upload_pk = " . intval($uploadId));
+        }
+
+        $errors[] = _("Could not save uploaded file: ") . $originalFileName;
+        continue;
+    }
+
+    $success[] = [
+        "tempfile" => $uploadedTempFile,
+        "originalfile" => $originalFileName,
+        "uploadid" => $uploadId
+    ];
+}
     if (!empty($errors)) {
       return [false, implode(" ; ", $errors), ""];
     }
